@@ -1,11 +1,11 @@
-package com.practice.demo
+package com.practice.kopring
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class DemoApplication
+class PracticeKopringApplication
 
 fun main(args: Array<String>) {
-	runApplication<DemoApplication>(*args)
+	runApplication<PracticeKopringApplication>(*args)
 }
