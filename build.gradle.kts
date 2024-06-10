@@ -10,6 +10,8 @@ plugins {
     id("io.spring.dependency-management") version "1.1.4"
     kotlin("jvm") version "1.9.23"
     kotlin("plugin.spring") version "1.9.23"
+    kotlin("plugin.jpa") version "1.9.23"
+
 }
 
 group = "com.practice"
@@ -29,9 +31,17 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
+    implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
+
+    implementation("com.mysql:mysql-connector-j:8.4.0")
+    implementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
+    implementation("org.springframework.data:spring-data-jpa:${springBootVersion}")
 
 }
 
+noArg {
+    annotation("jakarta.persistence.Entity")
+}
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
