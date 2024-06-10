@@ -18,7 +18,7 @@ comment '멤버';
 
 @Entity
 @Table(name = "member")
-class Member(
+data class Member(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,

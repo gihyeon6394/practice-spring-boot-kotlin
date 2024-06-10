@@ -39,9 +39,7 @@ dependencies {
 
 }
 
-noArg {
-    annotation("jakarta.persistence.Entity")
-}
+
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
