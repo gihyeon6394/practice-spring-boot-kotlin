@@ -1,6 +1,7 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 val springBootVersion: String by extra { "3.2.5" }
+val jacksonVersion: String by extra { "2.17.0" }
 
 
 plugins {
@@ -36,6 +37,10 @@ dependencies {
     implementation("com.mysql:mysql-connector-j:8.4.0")
     implementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
     implementation("org.springframework.data:spring-data-jpa:${springBootVersion}")
+
+    implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
+    implementation("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
+    implementation("com.fasterxml.jackson.core:jackson-databind:$jacksonVersion")
 
 }
 
