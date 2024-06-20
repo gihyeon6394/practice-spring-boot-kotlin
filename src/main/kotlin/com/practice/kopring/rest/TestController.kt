@@ -1,6 +1,7 @@
 package com.practice.kopring.rest
 
 import com.practice.kopring.PracticeKopringApplication
+import com.practice.kopring.application.tmp.ParentBean
 import com.practice.kopring.application.tmp.Person
 import org.slf4j.LoggerFactory
 import org.springframework.web.bind.annotation.GetMapping
@@ -10,8 +11,9 @@ import org.springframework.web.bind.annotation.RestController
  * @author gihyeon-kim
  */
 @RestController
-class TestController {
-
+class TestController (
+    private val beans: List<ParentBean>
+) {
     private val log = LoggerFactory.getLogger(PracticeKopringApplication::class.java)
 
     @GetMapping("/test")
@@ -29,5 +31,10 @@ class TestController {
     @GetMapping("/test2")
     fun test2(): List<Person> {
         return listOf(Person("Kim", 20), Person("Lee", 19), Person("Park", 21));
+    }
+
+    @GetMapping("/beanList")
+    fun beanList(): List<String> {
+        return beans.map { it.javaClass.simpleName }
     }
 }
