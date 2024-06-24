@@ -7,15 +7,6 @@ import com.fasterxml.jackson.annotation.Nulls
  * @author gihyeon-kim
  */
 
-// curl
-// curl --request POST \
-//   --url http://localhost:8080/createPerson \
-//   --header 'Content-Type: application/json' \
-//   --data '{
-// 	"name": "Kim",
-// 	"age": 20,
-// 	"carList": [ { "name": "BMW", "color": "blue" }, { "name": "Benz", "color": "black" }]
-// }'
 data class CreatePersonRequest(
     val name: String,
     val age: Int,

@@ -39,7 +39,6 @@ class TmpController(
         return beans.map { it.javaClass.simpleName }
     }
 
-    // retun HTTP 204 No Content
     @PostMapping("/createPerson", consumes = ["application/json"])
     @ResponseStatus(HttpStatus.NO_CONTENT)
     fun createPerson(
