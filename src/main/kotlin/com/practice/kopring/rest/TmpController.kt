@@ -3,16 +3,17 @@ package com.practice.kopring.rest
 import com.practice.kopring.PracticeKopringApplication
 import com.practice.kopring.application.tmp.ParentBean
 import com.practice.kopring.application.tmp.Person
+import com.practice.kopring.rest.model.CreatePersonRequest
 import org.slf4j.LoggerFactory
-import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.RestController
+import org.springframework.http.HttpStatus
+import org.springframework.web.bind.annotation.*
 
 /**
  * @author gihyeon-kim
  */
 @RestController
-class TestController (
-    private val beans: List<ParentBean>
+class TmpController(
+    private val beans: List<ParentBean>,
 ) {
     private val log = LoggerFactory.getLogger(PracticeKopringApplication::class.java)
 
@@ -36,5 +37,15 @@ class TestController (
     @GetMapping("/beanList")
     fun beanList(): List<String> {
         return beans.map { it.javaClass.simpleName }
+    }
+
+    // retun HTTP 204 No Content
+    @PostMapping("/createPerson", consumes = ["application/json"])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun createPerson(
+        @RequestBody createPersonRequest: CreatePersonRequest,
+    ): HttpStatus {
+        // something happens ...
+        return HttpStatus.NO_CONTENT
     }
 }
