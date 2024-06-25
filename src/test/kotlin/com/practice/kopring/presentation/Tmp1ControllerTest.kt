@@ -13,7 +13,7 @@ import org.springframework.test.web.servlet.post
  */
 @SpringBootTest
 @AutoConfigureMockMvc
-class TmpControllerTest(
+class Tmp1ControllerTest(
 
 ) {
     @Autowired
