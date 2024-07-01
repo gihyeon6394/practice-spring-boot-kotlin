@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <configuration>
 
-    <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} %magenta([%thread]) %highlight([%-3level]) %logger{5} - %msg %n" />
+    <property name="CONSOLE_PATTERN" value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%-4.20thread] [%-1level] %logger{150} : %msg%n" />
 
     <!-- Console appender 설정 -->
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
@@ -11,6 +11,7 @@
     </appender>
 
     <logger name="com.practice.kopring" level="INFO" />
+    <logger name="com.practice.kopring.application.feign" level="DEBUG" />
 
     <root level="WARN">
         <appender-ref ref="STDOUT"/>

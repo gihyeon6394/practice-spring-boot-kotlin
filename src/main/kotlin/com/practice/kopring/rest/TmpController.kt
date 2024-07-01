@@ -1,6 +1,6 @@
 package com.practice.kopring.rest
 
-import com.practice.kopring.PracticeKopringApplication
+import com.practice.kopring.application.feign.TmpFeign
 import com.practice.kopring.application.tmp.ParentBean
 import com.practice.kopring.application.tmp.Person
 import com.practice.kopring.rest.model.CreatePersonRequest
@@ -14,18 +14,13 @@ import org.springframework.web.bind.annotation.*
 @RestController
 class TmpController(
     private val beans: List<ParentBean>,
-) {
-    private val log = LoggerFactory.getLogger(PracticeKopringApplication::class.java)
+    private val tmpFeign: TmpFeign,
+    ) {
+    private val log = LoggerFactory.getLogger(TmpController::class.java)
 
     @GetMapping("/test")
     fun test(): String {
-
-        log.trace("Hello, World!")
-        log.debug("Hello, World!")
-        log.info("Hello, World!")
-        log.warn("Hello, World!")
-        log.error("Hello, World!")
-
+        tmpFeign.testReadTimeout()
         return "Hello, World!"
     }
 
@@ -46,5 +41,12 @@ class TmpController(
     ): HttpStatus {
         // something happens ...
         return HttpStatus.NO_CONTENT
+    }
+
+
+    @GetMapping("/testReadTimeout")
+    fun testReadTimeout(): String {
+        Thread.sleep(3000)
+        return "success msg"
     }
 }
