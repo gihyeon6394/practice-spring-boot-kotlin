@@ -1,6 +1,7 @@
 package com.practice.kopring.rest
 
 import com.practice.kopring.application.feign.TmpFeign
+import com.practice.kopring.application.member.repo.MemberRepo
 import com.practice.kopring.application.tmp.ParentBean
 import com.practice.kopring.application.tmp.Person
 import com.practice.kopring.rest.model.CreatePersonRequest
@@ -15,7 +16,8 @@ import org.springframework.web.bind.annotation.*
 class TmpController(
     private val beans: List<ParentBean>,
     private val tmpFeign: TmpFeign,
-    ) {
+    private val memberRepo: MemberRepo,
+) {
     private val log = LoggerFactory.getLogger(TmpController::class.java)
 
     @GetMapping("/test")
@@ -48,5 +50,10 @@ class TmpController(
     fun testReadTimeout(): String {
         Thread.sleep(3000)
         return "success msg"
+    }
+
+    @GetMapping("/members")
+    fun members(): List<String> {
+        return memberRepo.findAll().map { it.name }
     }
 }

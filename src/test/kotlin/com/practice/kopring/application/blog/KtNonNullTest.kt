@@ -1,4 +1,4 @@
-package com.practice.kopring.domain
+package com.practice.kopring.application.blog
 
 import com.fasterxml.jackson.annotation.JsonSetter
 import com.fasterxml.jackson.annotation.Nulls

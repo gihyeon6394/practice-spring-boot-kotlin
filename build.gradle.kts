@@ -20,7 +20,6 @@ group = "com.practice"
 version = "0.0.1-SNAPSHOT"
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
 }
 
 repositories {
@@ -39,11 +38,14 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
     implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
-    implementation("jakarta.annotation:jakarta.annotation-api:3.0.0")
 
+    implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("com.mysql:mysql-connector-j:8.4.0")
-    implementation("jakarta.persistence:jakarta.persistence-api:3.2.0")
-    implementation("org.springframework.data:spring-data-jpa:${springBootVersion}")
+
+    implementation("jakarta.annotation:jakarta.annotation-api")
+    implementation("jakarta.persistence:jakarta.persistence-api")
+
+    implementation("org.springframework.boot:spring-boot-starter-data-jpa:3.3.0")
 
     implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
@@ -51,6 +53,7 @@ dependencies {
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
 
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
+    implementation(kotlin("stdlib-jdk8"))
 
 }
 
@@ -64,4 +67,7 @@ tasks.withType<KotlinCompile> {
 
 tasks.withType<Test> {
     useJUnitPlatform()
+}
+kotlin {
+    jvmToolchain(17)
 }

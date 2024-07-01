@@ -4,8 +4,8 @@ import jakarta.persistence.*
 import java.time.LocalDateTime
 
 @Entity
-@Table(name = "member")
-class Member(
+@Table(name = "team")
+class Team(
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     val id: Long? = null,
@@ -16,4 +16,7 @@ class Member(
     @Column
     val ymdtUpdt: LocalDateTime? = null
 
-)
+) {
+    @OneToMany(mappedBy = "id", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    var members: List<Member> = emptyList()
+}
