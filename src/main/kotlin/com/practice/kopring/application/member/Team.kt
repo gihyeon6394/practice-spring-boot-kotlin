@@ -14,9 +14,9 @@ class Team(
     @Column
     val ymdtCre: LocalDateTime = LocalDateTime.now(),
     @Column
-    val ymdtUpdt: LocalDateTime? = null
+    val ymdtUpdt: LocalDateTime? = null,
 
-) {
-    @OneToMany(mappedBy = "id", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    ) {
+    @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var members: List<Member> = emptyList()
 }

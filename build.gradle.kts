@@ -8,13 +8,14 @@ val querydslVersion: String by extra { "5.1.0" }
 
 plugins {
     val springBootVersion = "3.2.5"
+    val kotlinVersion = "2.0.0"
 
     id("org.springframework.boot") version springBootVersion
     id("io.spring.dependency-management") version "1.1.4"
-    kotlin("jvm") version "1.9.23"
-    kotlin("plugin.spring") version "1.9.23"
-    kotlin("plugin.jpa") version "1.9.23"
-    kotlin("kapt") version "2.0.0"
+    kotlin("jvm") version kotlinVersion
+    kotlin("plugin.spring") version kotlinVersion
+    kotlin("plugin.jpa") version kotlinVersion
+    kotlin("kapt") version kotlinVersion
 
 }
 
@@ -33,10 +34,12 @@ dependencyManagement {
         mavenBom ("org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}")
     }
 }
-
+allOpen {
+    annotation("jakarta.persistence.Entity")
+    annotation("jakarta.persistence.Embeddable")
+    annotation("jakarta.persistence.MappedSuperclass")
+}
 dependencies {
-    kapt("groupId:artifactId:version")
-
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
@@ -58,6 +61,7 @@ dependencies {
     implementation("com.querydsl:querydsl-sql:${querydslVersion}")
     implementation("com.querydsl:querydsl-apt:${querydslVersion}")
     kapt("com.querydsl:querydsl-apt:${querydslVersion}:jpa")
+    kapt("org.springframework.boot:spring-boot-configuration-processor")
 
     implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")

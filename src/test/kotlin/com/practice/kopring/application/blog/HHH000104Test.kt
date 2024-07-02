@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.data.domain.PageRequest
 import java.time.LocalDateTime
 
 @SpringBootTest
@@ -56,10 +57,29 @@ class HHH000104Test @Autowired constructor(
     }
 
     @Test
-    @DisplayName("데이터 잘 들어 갔는가?")
+    @DisplayName("데이터 잘 들어 갔는가")
     fun test() {
-        val members = memberRepo.findAll()
-        assert(members.size == 5)
-        println(members)
+        with(teamRepo.findAll()) {
+            assert(size == 2)
+            println(this)
+        }
+    }
+
+    @Test
+    @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생")
+    fun getTop2() {
+        val pageSize = 2
+
+        with(
+            teamRepo.findTopN(
+                PageRequest.of(
+                    0,
+                    pageSize
+                )
+            )
+        ) {//  HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
+            assert(size == pageSize)
+            println(this)
+        }
     }
 }
