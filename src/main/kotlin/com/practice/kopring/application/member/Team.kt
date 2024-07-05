@@ -15,6 +15,7 @@ class Team(
     val ymdtCre: LocalDateTime = LocalDateTime.now(),
     @Column
     val ymdtUpdt: LocalDateTime? = null,
+) {
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
-    val members: List<Member> = mutableListOf(),
-)
+    var members: MutableList<Member> = mutableListOf()
+}

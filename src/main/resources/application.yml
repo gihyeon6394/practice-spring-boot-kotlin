@@ -8,7 +8,7 @@ spring:
     driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: validate
     show-sql: true
     database-platform: org.hibernate.dialect.MySQLDialect
   cloud:
