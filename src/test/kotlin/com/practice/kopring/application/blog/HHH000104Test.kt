@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.test.annotation.Rollback
 import java.time.LocalDateTime
 
 @SpringBootTest
@@ -24,10 +25,8 @@ class HHH000104Test @Autowired constructor(
 
     @BeforeEach
     fun setUp() {
-        teamRepo.deleteAll()
-        memRepo.deleteAll()
-        em.flush()
-        em.clear()
+        deleteAll()
+
         val now = LocalDateTime.now()
         val aespa = Team(
             name = "에스파",
@@ -64,9 +63,15 @@ class HHH000104Test @Autowired constructor(
     }
 
     @AfterEach
-    fun destroy() {
+    fun afterEach() {
+        deleteAll()
+    }
+
+    fun deleteAll() {
         teamRepo.deleteAll()
         memRepo.deleteAll()
+        em.flush()
+        em.clear()
     }
 
     @Test
@@ -82,20 +87,9 @@ class HHH000104Test @Autowired constructor(
     @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생")
     fun getTop2() {
         val pageSize = 2
-//        with(
-//            teamRepo.findTopN(
-//                PageRequest.of(
-//                    0,
-//                    pageSize
-//                )
-//            )
-//        ) {//  HHH90003004: firstResult/maxResults specified with collection fetch; applying in memory
-//            println(this)
-//            assert(size == pageSize)
-//        }
-        em.flush()
-        em.clear()
-        em.createQuery("SELECT DISTINCT t FROM Team t join fetch t.members", Team::class.java)
+
+        em.createQuery("SELECT distinct t FROM Team t join fetch t.members m", Team::class.java)
+            .setMaxResults(pageSize)
             .resultList
             .also {
                 println(it)

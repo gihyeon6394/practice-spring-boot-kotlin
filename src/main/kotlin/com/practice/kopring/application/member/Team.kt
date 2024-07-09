@@ -18,4 +18,11 @@ class Team(
 ) {
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
     var members: MutableList<Member> = mutableListOf()
+        set(value) {
+            with(this.members) {
+                clear()
+                addAll(value)
+                forEach { it.team = this@Team }
+            }
+        }
 }
