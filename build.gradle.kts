@@ -1,13 +1,13 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
-val springBootVersion: String by extra { "3.2.5" }
+val springBootVersion: String by extra { "3.3.1" }
 val jacksonVersion: String by extra { "2.17.0" }
 val springCloudVersion: String by extra { "2023.0.2" }
 val querydslVersion: String by extra { "5.1.0" }
 
 
 plugins {
-    val springBootVersion = "3.2.5"
+    val springBootVersion = "3.3.1"
     val kotlinVersion = "2.0.0"
 
     id("org.springframework.boot") version springBootVersion
