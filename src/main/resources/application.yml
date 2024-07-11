@@ -1,17 +1,6 @@
 spring:
   application:
     name: kopring
-  datasource:
-    kopring:
-      url: jdbc:log4jdbc:mysql://localhost:3306/kopring
-      username: root
-      password: root
-      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
-    toybatch:
-      url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
-      username: root
-      password: root
-      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
   jpa:
     hibernate:
       ddl-auto: validate
@@ -26,5 +15,16 @@ spring:
             readTimeout: 1000
             loggerLevel: full
 
+datasource:
+    kopring:
+      jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/kopring
+      username: root
+      password: root
+      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+    toybatch:
+      jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
+      username: root
+      password: root
+      driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
 logging:
   config: classpath:logback-spring.xml
