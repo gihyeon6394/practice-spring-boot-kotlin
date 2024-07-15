@@ -15,6 +15,6 @@ class EntityMangerConfig {
     @Bean
     @ConfigurationProperties("spring.jpa")
     fun jpaProperties(): JpaProperties {
-        return JpaProperties()
+        return JpaProperties() // TODO. strategy 지정 안됨
     }
 }
