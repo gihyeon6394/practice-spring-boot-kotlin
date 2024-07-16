@@ -1,10 +1,10 @@
 package com.practice.kopring.config
 
-import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.context.annotation.Primary
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 import org.springframework.orm.jpa.JpaVendorAdapter
 import org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean
@@ -18,14 +18,14 @@ import javax.sql.DataSource
 @EnableJpaRepositories(basePackages = ["com.practice.kopring.application"], entityManagerFactoryRef = "kopringEntityManagerFactory")
 class KopringEntityMangerConfig {
 
-    @Bean(name = ["kopringEntityManagerFactory"])
+    @Bean
+    @Primary
     fun kopringEntityManagerFactory(
-        @Qualifier("kopringDataSource") dataSource: DataSource,
-        jpaProperties: JpaProperties,
+        kopringDataSource: DataSource?,
+        jpaProperties: JpaProperties
     ): LocalContainerEntityManagerFactoryBean {
-        return createEntityManagerFactoryBuilder(jpaProperties).dataSource(dataSource)
-            .packages("com.practice.kopring.application")
-            .persistenceUnit("kopringEntityManager").build()
+        val builder = createEntityManagerFactoryBuilder(jpaProperties)
+        return builder.dataSource(kopringDataSource).packages("com.practice.kopring.application").persistenceUnit("kopringDs").build()
     }
 
     private fun createEntityManagerFactoryBuilder(jpaProperties: JpaProperties): EntityManagerFactoryBuilder {
@@ -34,7 +34,6 @@ class KopringEntityMangerConfig {
     }
 
     private fun createJpaVendorAdapter(jpaProperties: JpaProperties): JpaVendorAdapter {
-        // ... map JPA properties as needed
         return HibernateJpaVendorAdapter()
     }
 

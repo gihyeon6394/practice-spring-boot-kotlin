@@ -2,13 +2,11 @@ spring:
   application:
     name: kopring
   jpa:
-    hibernate:
-      ddl-auto: validate
-      naming:
-        physical-strategy: org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy
-        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
     show-sql: true
     database-platform: org.hibernate.dialect.MySQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
   cloud:
     openfeign:
       client:
@@ -20,14 +18,18 @@ spring:
 
 datasource:
     kopring:
-      jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/kopring
+      url: jdbc:log4jdbc:mysql://localhost:3306/kopring
       username: root
       password: root
       driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+      configuration:
+        maximum-pool-size: 30
     toybatch:
-      jdbc-url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
+      url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
       username: root
       password: root
       driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
+      configuration:
+        maximum-pool-size: 5
 logging:
   config: classpath:logback-spring.xml
