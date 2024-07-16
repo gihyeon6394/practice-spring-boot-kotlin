@@ -58,12 +58,10 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter-data-jpa:3.3.0")
 
-    implementation("com.querydsl:querydsl-core:${querydslVersion}")
-    implementation("com.querydsl:querydsl-jpa:${querydslVersion}")
-    implementation("com.querydsl:querydsl-sql:${querydslVersion}")
-    implementation("com.querydsl:querydsl-apt:${querydslVersion}")
-    kapt("com.querydsl:querydsl-apt:${querydslVersion}:jpa")
-    kapt("org.springframework.boot:spring-boot-configuration-processor")
+    implementation("com.querydsl:querydsl-jpa:${querydslVersion}:jakarta")
+    kapt("com.querydsl:querydsl-apt:${querydslVersion}:jakarta")
+    kapt("jakarta.annotation:jakarta.annotation-api")
+    kapt("jakarta.persistence:jakarta.persistence-api")
 
     implementation("com.fasterxml.jackson.core:jackson-core:$jacksonVersion")
     implementation("com.fasterxml.jackson.core:jackson-annotations:$jacksonVersion")
@@ -79,7 +77,7 @@ dependencies {
 tasks.withType<KotlinCompile> {
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict"
-        jvmTarget = "17"
+        jvmTarget = JavaVersion.VERSION_17.toString()
     }
 }
 
@@ -88,4 +86,24 @@ tasks.withType<Test> {
 }
 kotlin {
     jvmToolchain(17)
+}
+
+val generated = file("src/main/generated")
+
+tasks.withType<JavaCompile> {
+    options.generatedSourceOutputDirectory.set(generated)
+}
+sourceSets {
+    main {
+        kotlin.srcDirs += generated
+    }
+}
+
+tasks.named("clean") {
+    doLast {
+        generated.deleteRecursively()
+    }
+}
+kapt {
+    generateStubs = true
 }

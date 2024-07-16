@@ -12,7 +12,6 @@ import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.test.annotation.Rollback
 import java.time.LocalDateTime
 
 @SpringBootTest
@@ -47,7 +46,7 @@ class HHH000104Test @Autowired constructor(
             ymdtCre = now,
         )
         val minzi = Member(
-            name = "지수",
+            name = "민지",
             ymdtCre = now,
         )
         val haerin = Member(
@@ -59,7 +58,17 @@ class HHH000104Test @Autowired constructor(
             ymdtCre = now,
         )
         newJeans.members = mutableListOf(minzi, haerin, hani)
-        teamRepo.saveAll(listOf(aespa, newJeans))
+
+        val redVelvet = Team(
+            name = "레드벨벳",
+            ymdtCre = now,
+        )
+        val joy = Member(
+            name = "조이",
+            ymdtCre = now,
+        )
+        redVelvet.members = mutableListOf(joy)
+        teamRepo.saveAll(listOf(aespa, newJeans, redVelvet))
     }
 
     @AfterEach
@@ -78,7 +87,6 @@ class HHH000104Test @Autowired constructor(
     @DisplayName("데이터 잘 들어 갔는가")
     fun test() {
         with(teamRepo.findAll()) {
-            println(this)
             assert(size == 2)
         }
     }
@@ -92,8 +100,16 @@ class HHH000104Test @Autowired constructor(
             .setMaxResults(pageSize)
             .resultList
             .also {
-                println(it)
                 assert(it.size == pageSize)
             }
+    }
+
+
+    @Test
+    @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생")
+    fun getTop2ByQuerydsl() {
+        teamRepo.findAllTeam().also {
+            assert(it.size == 1)
+        }
     }
 }
