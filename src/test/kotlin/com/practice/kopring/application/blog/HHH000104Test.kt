@@ -106,7 +106,7 @@ class HHH000104Test @Autowired constructor(
 
 
     @Test
-    @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생")
+    @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생 (QueryDSL)")
     fun getTop2ByQuerydsl() {
         teamRepo.findAllTeam().also {
             assert(it.size == 1)

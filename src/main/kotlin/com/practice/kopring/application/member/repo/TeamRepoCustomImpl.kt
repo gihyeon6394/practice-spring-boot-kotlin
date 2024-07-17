@@ -14,6 +14,7 @@ class TeamRepoCustomImpl : TeamRepoCustom, QuerydslRepositorySupport(Team::class
     override fun findAllTeam(): List<Team> {
         return from(team)
             .leftJoin(team.members).distinct().fetchJoin()
+            .offset(0)
             .limit(1)
             .fetch()
     }
