@@ -47,7 +47,6 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
     implementation("org.springframework.boot:spring-boot-starter-parent:${springBootVersion}")
 
-
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16")
 
@@ -71,6 +70,10 @@ dependencies {
     implementation("org.springframework.cloud:spring-cloud-starter-openfeign")
     implementation(kotlin("stdlib-jdk8"))
 
+    implementation("org.springframework.boot:spring-boot-starter-actuator:${springBootVersion}")
+    implementation("org.springframework.boot:spring-boot-starter-aop:${springBootVersion}")
+
+    implementation("io.github.resilience4j:resilience4j-spring-boot3")
 }
 
 

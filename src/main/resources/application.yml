@@ -15,7 +15,6 @@ spring:
             connectTimeout: 1000
             readTimeout: 1000
             loggerLevel: full
-
 datasource:
     kopring:
       url: jdbc:log4jdbc:mysql://localhost:3306/kopring
@@ -33,3 +32,21 @@ datasource:
         maximum-pool-size: 5
 logging:
   config: classpath:logback-spring.xml
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 100
+      permittedNumberOfCallsInHalfOpenState: 10
+      waitDurationInOpenState: 10000
+      failureRateThreshold: 60
+      eventConsumerBufferSize: 10
+      registerHealthIndicator: true
+    someShared:
+      slidingWindowSize: 50
+      permittedNumberOfCallsInHalfOpenState: 10
+  instances:
+    appA:
+      baseConfig: default
+      waitDurationInOpenState: 5000
+    appB:
+      baseConfig: someShared
