@@ -11,11 +11,18 @@ import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport
 class TeamRepoCustomImpl : TeamRepoCustom, QuerydslRepositorySupport(Team::class.java) {
     private val team = QTeam.team
     private val member = QMember.member
-    override fun findAllTeam(): List<Team> {
+    override fun findAllTeam(pageSize: Long): List<Team> {
         return from(team)
             .leftJoin(team.members).distinct().fetchJoin()
             .offset(0)
-            .limit(1)
+            .limit(pageSize)
+            .fetch()
+    }
+
+    override fun findAllTeamSafe(pageSize: Long): List<Team> {
+        return from(team)
+            .offset(0)
+            .limit(pageSize)
             .fetch()
     }
 }

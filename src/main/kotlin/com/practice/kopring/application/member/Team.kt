@@ -1,6 +1,7 @@
 package com.practice.kopring.application.member
 
 import jakarta.persistence.*
+import org.hibernate.annotations.BatchSize
 import java.time.LocalDateTime
 
 @Entity
@@ -17,6 +18,7 @@ class Team(
     val ymdtUpdt: LocalDateTime? = null,
 ) {
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL])
+    @BatchSize(size = 10)
     var members: MutableList<Member> = mutableListOf()
         set(value) {
             with(this.members) {

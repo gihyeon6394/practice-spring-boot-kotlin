@@ -4,5 +4,6 @@ import com.practice.kopring.application.member.Team
 
 interface TeamRepoCustom {
 
-    fun findAllTeam(): List<Team>
+    fun findAllTeam(pageSize: Long): List<Team>
+    fun findAllTeamSafe(pageSize: Long): List<Team>
 }

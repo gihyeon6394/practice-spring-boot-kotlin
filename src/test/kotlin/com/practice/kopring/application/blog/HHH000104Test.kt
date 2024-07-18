@@ -6,6 +6,7 @@ import com.practice.kopring.application.member.repo.MemberRepo
 import com.practice.kopring.application.member.repo.TeamRepo
 import jakarta.persistence.EntityManager
 import jakarta.transaction.Transactional
+import org.hibernate.Hibernate
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -87,7 +88,7 @@ class HHH000104Test @Autowired constructor(
     @DisplayName("데이터 잘 들어 갔는가")
     fun test() {
         with(teamRepo.findAll()) {
-            assert(size == 2)
+            assert(size == 3)
         }
     }
 
@@ -108,8 +109,37 @@ class HHH000104Test @Autowired constructor(
     @Test
     @DisplayName("페이지로 2개의 데이터만 가져오기, HHH90003004 발생 (QueryDSL)")
     fun getTop2ByQuerydsl() {
-        teamRepo.findAllTeam().also {
-            assert(it.size == 1)
+        val pageSize = 2
+        teamRepo.findAllTeam(pageSize.toLong()).also {
+            assert(it.size == pageSize)
+        }
+    }
+
+    @Test
+    @DisplayName("페이지로 2개의 데이터만 가져오기 (왜 IN 절 안찍히지?)")
+    fun getTop2Safe() {
+        val pageSize = 2
+
+        em.createQuery("SELECT t FROM Team t", Team::class.java)
+            .setMaxResults(pageSize)
+            .resultList
+            .also { resultList ->
+                // member 초기화
+//                if (resultList.isNotEmpty())
+//                    Hibernate.initialize(resultList[0].members)
+                resultList.forEach { Hibernate.initialize(it.members) }
+                assert(resultList.size == pageSize)
+            }
+    }
+
+
+    @Test
+    @DisplayName("페이지로 2개의 데이터만 가져오기 (왜 IN 절 안찍히지?)")
+    fun getTop2ByQuerydslSafe() {
+        val pageSize = 2
+        teamRepo.findAllTeamSafe(pageSize.toLong()).also { resultList ->
+            resultList.forEach { Hibernate.initialize(it.members) }
+            assert(resultList.size == pageSize)
         }
     }
 }
