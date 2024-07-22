@@ -47,6 +47,8 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-web:${springBootVersion}")
     implementation("org.springframework.boot:spring-boot-starter-parent:${springBootVersion}")
 
+    implementation("net.logstash.logback:logstash-logback-encoder:7.4")
+
     implementation("org.springframework.boot:spring-boot-starter-data-jdbc")
     implementation("org.bgee.log4jdbc-log4j2:log4jdbc-log4j2-jdbc4.1:1.16")
 
