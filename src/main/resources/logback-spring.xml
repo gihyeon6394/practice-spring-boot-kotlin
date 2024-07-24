@@ -14,6 +14,7 @@
     <appender name="LOGSTASH" class="net.logstash.logback.appender.LogstashTcpSocketAppender">
         <destination>127.0.0.1:5001</destination>
         <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"app_name":"kopring"}</customFields>
         </encoder>
     </appender>
 
