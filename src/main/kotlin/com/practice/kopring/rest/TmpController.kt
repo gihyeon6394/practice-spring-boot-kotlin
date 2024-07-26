@@ -5,6 +5,7 @@ import com.practice.kopring.application.feign.TmpFeign
 import com.practice.kopring.application.member.repo.MemberRepo
 import com.practice.kopring.application.tmp.ParentBean
 import com.practice.kopring.application.tmp.Person
+import com.practice.kopring.rest.model.Car
 import com.practice.kopring.rest.model.CreatePersonRequest
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
 import org.slf4j.LoggerFactory
@@ -70,5 +71,14 @@ class TmpController(
     private fun fallback(e: MySQLTimeoutException): List<String> {
         LoggerFactory.getLogger(javaClass).error("Handled the exception when the CircuitBreaker is open", e)
         return listOf("서비스가 일시적으로 불안정합니다. 잠시 후 다시 시도해주세요.")
+    }
+
+    @PostMapping("/ignoreTest", consumes = ["application/json"])
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun ignoreTest(
+        @RequestBody car: Car,
+    ): HttpStatus {
+        // something happens ...
+        return HttpStatus.NO_CONTENT
     }
 }
