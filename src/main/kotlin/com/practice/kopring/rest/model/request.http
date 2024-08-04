@@ -1,0 +1,30 @@
+POST http://localhost:8080/createPerson
+Content-Type: application/json
+
+{
+  "name": "Kim",
+  "age": 20,
+  "carList": [
+    {
+      "name": "BMW",
+      "color": "blue",
+      "carType": "SEDAN"
+    },
+    {
+      "name": "Benz",
+      "color": "black",
+      "carType": "SUV"
+    }
+  ]
+}
+
+###
+
+POST http://localhost:8080/ignoreTest
+Content-Type: application/json
+
+{
+  "name": "BMW",
+  "color": "blue",
+  "carType": ""
+}
