@@ -34,6 +34,15 @@ class KtNonNullTest {
         }
     }
 
+    data class Tmp1(
+        val list: List<Child> = emptyList(),
+    )
+
+    data class Child(
+        val name: String,
+    )
+
+
     @Test
     @DisplayName("kotlin non-null 필드에 런타임에 null 값을 할당할 수 있지만, @JsonSetter로 null을 다룰 수 있다")
     fun testWithJsonSetter() {
@@ -64,24 +73,12 @@ class KtNonNullTest {
 
         }
     }
+
+    data class Tmp2(
+        @JsonSetter(contentNulls = Nulls.SKIP) // null인 element는 무시
+        val childList1: List<Child> = emptyList(),
+
+        @JsonSetter(contentNulls = Nulls.FAIL) // null인 element가 있으면 Exception을 발생
+        val childList2: List<Child> = emptyList(),
+    )
 }
-
-data class Tmp2(
-    @JsonSetter(contentNulls = Nulls.SKIP) // null인 element는 무시
-    val childList1: List<Child> = emptyList(),
-
-    @JsonSetter(contentNulls = Nulls.FAIL) // null인 element가 있으면 Exception을 발생
-    val childList2: List<Child> = emptyList(),
-)
-
-data class Tmp1(
-    val list: List<Child> = emptyList(),
-)
-
-data class Child(
-    val name: String,
-)
-
-
-
-
