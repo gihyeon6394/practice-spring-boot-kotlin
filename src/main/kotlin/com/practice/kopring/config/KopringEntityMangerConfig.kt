@@ -1,5 +1,6 @@
 package com.practice.kopring.config
 
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 import org.springframework.context.annotation.Bean
@@ -15,17 +16,21 @@ import javax.sql.DataSource
  * @author gihyeon-kim
  */
 @Configuration(proxyBeanMethods = false)
-@EnableJpaRepositories(basePackages = ["com.practice.kopring.application"], entityManagerFactoryRef = "kopringEntityManagerFactory")
+@EnableJpaRepositories(
+    basePackages = ["com.practice.kopring.application"],
+    entityManagerFactoryRef = "kopringEntityManagerFactory"
+)
 class KopringEntityMangerConfig {
 
     @Bean
     @Primary
     fun kopringEntityManagerFactory(
-        kopringDataSource: DataSource?,
-        jpaProperties: JpaProperties
+        @Qualifier("kopringDataSource") kopringDataSource: DataSource?,
+        jpaProperties: JpaProperties,
     ): LocalContainerEntityManagerFactoryBean {
         val builder = createEntityManagerFactoryBuilder(jpaProperties)
-        return builder.dataSource(kopringDataSource).packages("com.practice.kopring.application").persistenceUnit("kopringDs").build()
+        return builder.dataSource(kopringDataSource).packages("com.practice.kopring.application")
+            .persistenceUnit("kopringDs").build()
     }
 
     private fun createEntityManagerFactoryBuilder(jpaProperties: JpaProperties): EntityManagerFactoryBuilder {

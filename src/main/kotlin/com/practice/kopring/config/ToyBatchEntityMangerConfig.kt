@@ -1,5 +1,6 @@
 package com.practice.kopring.config
 
+import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.boot.autoconfigure.orm.jpa.JpaProperties
 import org.springframework.boot.orm.jpa.EntityManagerFactoryBuilder
 import org.springframework.context.annotation.Bean
@@ -14,12 +15,15 @@ import javax.sql.DataSource
  * @author gihyeon-kim
  */
 @Configuration(proxyBeanMethods = false)
-@EnableJpaRepositories(basePackages = ["com.practice.kopring.batch"], entityManagerFactoryRef = "toyBatchEntityManagerFactory")
+@EnableJpaRepositories(
+    basePackages = ["com.practice.kopring.batch"],
+    entityManagerFactoryRef = "toyBatchEntityManagerFactory"
+)
 class ToyBatchEntityMangerConfig {
 
     @Bean
     fun toyBatchEntityManagerFactory(
-        toyBatchDataSource: DataSource,
+        @Qualifier("toyBatchDataSource") toyBatchDataSource: DataSource,
         jpaProperties: JpaProperties,
     ): LocalContainerEntityManagerFactoryBean {
         return createEntityManagerFactoryBuilder(jpaProperties).dataSource(toyBatchDataSource)
@@ -29,7 +33,8 @@ class ToyBatchEntityMangerConfig {
 
     private fun createEntityManagerFactoryBuilder(jpaProperties: JpaProperties): EntityManagerFactoryBuilder {
         val jpaVendorAdapter = createJpaVendorAdapter(jpaProperties)
-        jpaProperties.properties["hibernate.physical_naming_strategy"] = "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"
+        jpaProperties.properties["hibernate.physical_naming_strategy"] =
+            "org.hibernate.boot.model.naming.CamelCaseToUnderscoresNamingStrategy"
         return EntityManagerFactoryBuilder(jpaVendorAdapter, jpaProperties.properties, null)
     }
 
