@@ -1,4 +1,6 @@
 spring:
+  jmx:
+    enabled: false
   application:
     name: kopring
   jpa:
@@ -23,6 +25,7 @@ datasource:
       driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
       configuration:
         maximum-pool-size: 30
+        registerMbeans: true
     toybatch:
       url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
       username: root
@@ -30,6 +33,7 @@ datasource:
       driver-class-name: net.sf.log4jdbc.sql.jdbcapi.DriverSpy
       configuration:
         maximum-pool-size: 5
+        registerMbeans: true
 logging:
   config: classpath:logback-spring.xml
 resilience4j.circuitbreaker:
@@ -50,3 +54,12 @@ resilience4j.circuitbreaker:
       waitDurationInOpenState: 5000
     appB:
       baseConfig: someShared
+management:
+  jmx:
+    metrics:
+      export:
+        domain: "com.practice.kopring"
+  endpoints:
+    web:
+      exposure:
+        include: '*'
