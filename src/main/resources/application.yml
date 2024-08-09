@@ -26,6 +26,7 @@ datasource:
       configuration:
         maximum-pool-size: 30
         registerMbeans: true
+        minimum-idle: 10
     toybatch:
       url: jdbc:log4jdbc:mysql://localhost:3306/toyBatch
       username: root
@@ -34,6 +35,7 @@ datasource:
       configuration:
         maximum-pool-size: 5
         registerMbeans: true
+        minimum-idle: 1
 logging:
   config: classpath:logback-spring.xml
 resilience4j.circuitbreaker:
