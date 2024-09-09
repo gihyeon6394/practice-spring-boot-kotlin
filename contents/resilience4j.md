@@ -251,7 +251,7 @@ CircuitBreakerConfig circuitBreakerConfig = CircuitBreakerConfig.custom()
 CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.of(circuitBreakerConfig);
 
 
-// registry에서 CircuitBreaker를 이름 name1으로 생성
+// registry에서 CircuitBreaker를 이름 name1으로 생성 (default 설정)
 CircuitBreaker circuitBreakerWithDefaultConfig = circuitBreakerRegistry.circuitBreaker("name1");
 
 // registry에서 circuitBreakerConfig를 사용해 CircuitBreaker를 이름 name2로 생성
@@ -322,7 +322,7 @@ CircuitBreakerRegistry registry = CircuitBreakerRegistry.custom()
 - `Try.of(...)`, `Try.run(...)` 등을 사용해 람다 표현식을 데코레이트
 - `COSED`, `HALF_OPEN` 상ㅇ태일 때만 호출됨
 
-```java
+```
 // Given : testName의 CircuitBreaker 생성
 CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("testName");
 
@@ -345,7 +345,7 @@ assertThat(result.get()).isEqualTo("This can be any method which returns: 'Hello
 
 - event consumer를 등록해서 CircuitBreaker의 생성, 교체, 삭제 이벤트 감지
 
-```java
+```
 CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.ofDefaults();
 
 circuitBreakerRegistry.getEventPublisher()
@@ -363,7 +363,7 @@ circuitBreakerRegistry.getEventPublisher()
 
 - `CircuitBreakerEvent` : state 변화, 리셋, 성공 call, 에러 콜 저장, 에러 무시
 
-```java
+```
 circuitBreaker.getEventPublisher()
     .onSuccess(event -> logger.info(...))
     .onError(event -> logger.info(...))
@@ -375,7 +375,7 @@ circuitBreaker.getEventPublisher()
     .onEvent(event -> logger.info(...));
 ```
 
-```java
+```
 // beffured events
 CircularEventConsumer<CircuitBreakerEvent> ringBuffer = new CircularEventConsumer<>(10);
 
@@ -391,7 +391,161 @@ List<CircuitBreakerEvent> bufferedEvents = ringBuffer.getBufferedEvents()
 ```java
 // CacheCircuitBreakerRegistryStore를 주입하여 사용
 CircuitBreakerRegistry circuitBreakerRegistry = CircuitBreakerRegistry.custom()
-  .withRegistryStore(new CacheCircuitBreakerRegistryStore())
-  .build();
+        .withRegistryStore(new CacheCircuitBreakerRegistryStore())
+        .build();
 
 ```
+
+## Bulkhead
+
+### Introduction
+
+- 동시 실행 수를 제한하기 위해 bulkhead 패턴을 사용
+- Resilience4j의 2개의 bulkhead 패턴을 구현해둠
+    - `SemaphoreBulkhead` : 세마포어를 사용해 동시 실행 수 제한
+    - `FixedThreadPoolBulkhead` : 고정된 스레드 풀과 큐를 사용해 동시 실행 수 제한
+
+### Create a BulkheadRegistry
+
+- in-memory `BulkheadRegistry` 사용
+- `ThreadPoolBulkheadRegistry`에서 `Bulkhead` 인스턴스 생성, 관리
+
+```
+BulkheadRegistry bulkheadRegistry = BulkheadRegistry.ofDefaults();
+
+ThreadPoolBulkheadRegistry threadPoolBulkheadRegistry = ThreadPoolBulkheadRegistry.ofDefaults();
+
+```
+
+### Create and configure a Bulkhead
+
+- builder를 사용해 `BulkheadConfig` 커스텀 가능
+
+| property             | default | Description                               |
+|----------------------|---------|-------------------------------------------|
+| `maxConcurrentCalls` | 25      | 벌크헤드에 의해 허용되는 최대 동시 호출 수                  |
+| `maxWaitDuration`    | 0 (ms)  | 가득찬 벌크헤드에 진입하기 위해 블로킹되는 스레드 최대 대기 시간 (ms) |
+
+```java
+// 커스텀 Bulkhead 생성
+BulkheadConfig bulkheadConfig = BulkheadConfig.custom()
+        .maxConcurrentCalls(150) // 최대 150개의 동시 호출 허용
+        .maxWaitDuration(Duration.ofMillis(100)) // 100ms 대기 시간
+        .build();
+
+// Registry에 등록
+BulkheadRegistry bulkheadRegistry = BulkheadRegistry.of(bulkheadConfig);
+
+// Registry에서 name1 이름으로 Bulkhead 생성 (default 설정)
+Bulkhead bulkheadWithDefaultConfig = registry.bulkhead("name1");
+
+// Registry에서 bulkheadConfig를 사용해 name2 이름으로 Bulkhead 생성
+Bulkhead bulkheadWithCustomConfig = registry.bulkhead("name2", custom);
+```
+
+### Create and configure a ThreadPoolBulkhead
+
+- `ThreadPoolBulkheadConfig` builder로 커스텀 가능
+
+| property                    | default                                          | Description                           |
+|-----------------------------|--------------------------------------------------|---------------------------------------|
+| `maxThreadPoolSize`         | `Runtime.getRuntime().availableProcessors()`     | 최대 스레드 풀 크기                           |
+| `coreThreadPoolSize`        | `Runtime.getRuntime().availableProcessors() - 1` | 코어 스레드 풀 크기                           |
+| `queueCapacity`             | 100                                              | 큐 용량                                  |
+| `keepAliveDuration`         | 20 (ms)                                          | idle 스레드가 제거되기 전 대기 시간 (ms)           |
+| `writableStackTraceEnabled` | true                                             | bulkhead 예외 발생 시 stack trace 오류 출력 여부 |
+
+```
+// ThreadPoolBulkhead 생성
+ThreadPoolBulkheadConfig config = ThreadPoolBulkheadConfig.custom()
+  .maxThreadPoolSize(10) // 최대 10개의 스레드 풀 크기
+  .coreThreadPoolSize(2) // 코어 스레드 풀 크기 2
+  .queueCapacity(20) // 큐 용량 20
+  .build();
+        
+// config 설정으로 ThreadPoolBulkheadRegistry 생성
+ThreadPoolBulkheadRegistry registry = ThreadPoolBulkheadRegistry.of(config);
+
+// registry에서 name1 이름으로 Bulkhead 생성 (default 설정)
+ThreadPoolBulkhead bulkheadWithDefaultConfig = registry.bulkhead("name1");
+
+// custom 설정으로 BulkheadConfig 생성
+ThreadPoolBulkheadConfig custom = ThreadPoolBulkheadConfig.custom()
+  .maxThreadPoolSize(5)
+  .build();
+
+// registry에서 name2 이름으로 Bulkhead 생성
+ThreadPoolBulkhead bulkheadWithCustomConfig = registry.bulkhead("name2", custom);
+```
+
+### Decorate and execute a functional interface
+
+- CircuitBreaker처럼 `Callable`, `Supplier`, `Runnable` 등의 함수형 인터페이스를 데코레이트해서 사용 가능
+
+````
+// Given : Bulkhead 생성
+Bulkhead bulkhead = Bulkhead.of("name", config);
+
+// When : 데코레이트
+CheckedFunction0<String> decoratedSupplier = Bulkhead
+  .decorateCheckedSupplier(bulkhead, () -> "This can be any method which returns: 'Hello");
+
+// chaining
+Try<String> result = Try.of(decoratedSupplier)
+  .map(value -> value + " world'");
+
+// Then
+assertThat(result.isSuccess()).isTrue();
+assertThat(result.get()).isEqualTo("This can be any method which returns: 'Hello world'");
+assertThat(bulkhead.getMetrics().getAvailableConcurrentCalls()).isEqualTo(1);
+````
+
+### Consume emitted RegistryEvents
+
+- `BulkheadRegistry`에 이벤트 컨슈머를 등록하고, Bulkhead 생성, 교체, 삭제 이벤트 감지
+
+```
+BulkheadRegistry registry = BulkheadRegistry.ofDefaults();
+
+registry.getEventPublisher()
+  .onEntryAdded(entryAddedEvent -> {
+    Bulkhead addedBulkhead = entryAddedEvent.getAddedEntry();
+    LOG.info("Bulkhead {} added", addedBulkhead.getName());
+  })
+  .onEntryRemoved(entryRemovedEvent -> {
+    Bulkhead removedBulkhead = entryRemovedEvent.getRemovedEntry();
+    LOG.info("Bulkhead {} removed", removedBulkhead.getName());
+  });
+```
+
+### Consume emitted BulkheadEvents
+
+- BulkHead는 `BulkheadEvent`를 스트림으로 발행
+- 이벤트 타입
+    - 실행 허용/거부
+    - 실행 종료
+
+````
+bulkhead.getEventPublisher()
+    .onCallPermitted(event -> logger.info(...))
+    .onCallRejected(event -> logger.info(...))
+    .onCallFinished(event -> logger.info(...));
+````
+
+## RateLimiter
+
+### Introduction
+
+### Internals
+
+### Create a RateLimiterRegistry
+
+### Create and configure a RateLimiter
+
+### Decorate and execute a functional interface
+
+### Consume emitted RegistryEvents
+
+### Consume emitted RateLimiterEvents
+
+### Override the RegistryStore
