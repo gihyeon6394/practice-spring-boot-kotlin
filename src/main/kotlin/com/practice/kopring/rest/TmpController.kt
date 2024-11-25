@@ -9,6 +9,7 @@ import com.practice.kopring.rest.model.Car
 import com.practice.kopring.rest.model.CreatePersonRequest
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
 import org.slf4j.LoggerFactory
+import org.springframework.context.ApplicationEventPublisher
 import org.springframework.http.HttpStatus
 import org.springframework.web.bind.annotation.*
 
@@ -20,7 +21,8 @@ class TmpController(
     private val beans: List<ParentBean>,
     private val tmpFeign: TmpFeign,
     private val memberRepo: MemberRepo,
-) {
+    private val eventPublisher: ApplicationEventPublisher,
+    ) {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @GetMapping("/test")
@@ -81,4 +83,14 @@ class TmpController(
         // something happens ...
         return HttpStatus.NO_CONTENT
     }
+
+    @GetMapping("/eventTest")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun eventTest(): HttpStatus {
+        // something happens ...
+        eventPublisher.publishEvent(MemberSignupEvent("Kim"))
+        return HttpStatus.NO_CONTENT
+    }
 }
+
+data class MemberSignupEvent(val name: String)
