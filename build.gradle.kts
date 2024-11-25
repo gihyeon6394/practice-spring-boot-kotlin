@@ -4,6 +4,7 @@ val springBootVersion: String by extra { "3.3.1" }
 val jacksonVersion: String by extra { "2.17.0" }
 val springCloudVersion: String by extra { "2023.0.2" }
 val querydslVersion: String by extra { "5.1.0" }
+val coroutinesVersion: String by extra { "1.6.0" }
 
 
 plugins {
@@ -76,6 +77,10 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-aop:${springBootVersion}")
 
     implementation("io.github.resilience4j:resilience4j-spring-boot3")
+
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:${coroutinesVersion}")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${coroutinesVersion}")
+
 }
 
 
