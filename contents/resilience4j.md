@@ -536,16 +536,250 @@ bulkhead.getEventPublisher()
 
 ### Introduction
 
+- RateLimiter는 초당 허용된 호출 수를 제한하는 패턴
+- 제한할 요청 타입 등을 옵션으로 설정
+- e.g. 초과된 요청을 단순 차단, 대기열 생성 등
+
 ### Internals
+
+- 모든 주기를 nanosecond로 나눔
+- 각 주기는 `RateLimiterConfig.limitRefreshPeriod`로 설정
+- 주기가 시작될때마다 `RateLimiterConfig.limitForPeriod`에 허용수를 초기화
+- RateLimiter 가 활동적으로 사용되지 않으면 이러한 초기화 작업은 스킵되기도 함 `AtomicRateLimiter`
+
+![img_4.png](img_4.png)
+
+- RateLimiter의 기본 구현체 `AtomicRateLimiter` 는 AtomicReference를 사용해 상태를 관리
+- AtomicReferences는 불변
+    - `activeCycle` : 마지막 요청이 사용한 주기 번호
+    - `activePermission` : 마지막 요청 이후 사용 가능한 허용수
+        - 음수 : 허용된 요청 수에 대한 예약
+    - `nanosToWait` : 마지막 요청 이후 허용을 기다려야하는 nano 초
+- `SemaphoreBasedRateLimiter` : 세마포어를 사용해 RateLimiter 구현
 
 ### Create a RateLimiterRegistry
 
+- CircuitBreaker 모듈처럼 in-memory `RateLimiterRegistry` 사용
+
+````
+RateLimiterRegistry rateLimiterRegistry = RateLimiterRegistry.ofDefaults();
+````
+
 ### Create and configure a RateLimiter
+
+- `RateLimiterConfig` builder를 사용해 커스텀 설정 가능
+
+| property             | default  | Description                        |
+|----------------------|----------|------------------------------------|
+| `timeoutDuration`    | 5 (s)    | 스레드가 실행 권한을 받기위해 기다리는 기본 대기 시간 (s) |
+| `limitRefreshPeriod` | 500 (ns) | 허용된 호출 수를 초기화하는 주기 (ms)            |
+| `limitForPeriod`     | 50       | 주기당 허용된 호출 수                       |
+
+```
+// 10 req/ms 제한
+
+// RateLimiterConfig를 사용해 RateLimiter 생성
+RateLimiterConfig config = RateLimiterConfig.custom()
+  .limitRefreshPeriod(Duration.ofMillis(1)) // 1ms 주기로 초기화
+  .limitForPeriod(10) // 주기당 10개의 호출 허용
+  .timeoutDuration(Duration.ofMillis(25)) // 25ms 대기 시간
+  .build();
+
+RateLimiterRegistry rateLimiterRegistry = RateLimiterRegistry.of(config);
+
+RateLimiter rateLimiterWithDefaultConfig = rateLimiterRegistry
+  .rateLimiter("name1");
+
+RateLimiter rateLimiterWithCustomConfig = rateLimiterRegistry
+  .rateLimiter("name2", config);
+```
 
 ### Decorate and execute a functional interface
 
+- `Callable`, `Supplier`, `Runnable` 등의 함수형 인터페이스를 데코레이트해서 사용 가능
+
+```
+// BackendService.doSomething()를 RateLimiter로 데코레이트
+CheckedRunnable restrictedCall = RateLimiter
+    .decorateCheckedRunnable(rateLimiter, backendService::doSomething);
+
+Try.run(restrictedCall)
+    .andThenTry(restrictedCall)
+    .onFailure((RequestNotPermitted throwable) -> LOG.info("Wait before call it again :)"));
+```
+
 ### Consume emitted RegistryEvents
+
+- `RateLimiterRegistry`에 이벤트 컨슈머 등록 가능
+- `RateLimiter` 생성, 교체, 삭제 이벤트 감지
+
+```
+RateLimiterRegistry registry = RateLimiterRegistry.ofDefaults();
+registry.getEventPublisher()
+  .onEntryAdded(entryAddedEvent -> {
+    RateLimiter addedRateLimiter = entryAddedEvent.getAddedEntry();
+    LOG.info("RateLimiter {} added", addedRateLimiter.getName());
+  })
+  .onEntryRemoved(entryRemovedEvent -> {
+    RateLimiter removedRateLimiter = entryRemovedEvent.getRemovedEntry();
+    LOG.info("RateLimiter {} removed", removedRateLimiter.getName());
+  });
+```
 
 ### Consume emitted RateLimiterEvents
 
+- `RateLimiter`는 `RateLimitEvent`를 스트림으로 발행
+- 이벤트 : 권환 획득, 실패
+- 이벤트에는 이벤트 생성 시간, limiter name 과 같은 부가정보 포함
+
+````
+rateLimiter.getEventPublisher()
+    .onSuccess(event -> logger.info(...))
+    .onFailure(event -> logger.info(...));
+    
+// EventPublisher를 Reactive Stream으로 변경 가능
+ReactorAdapter.toFlux(rateLimiter.getEventPublisher())
+    .filter(event -> event.getEventType() == FAILED_ACQUIRE)
+    .subscribe(event -> logger.info(...))
+````
+
 ### Override the RegistryStore
+
+- in-memory `RegistryStore`를 오버라이딩해서 커스텀 구현
+
+```
+// CacheRateLimiterRegistryStore를 주입하여 RateLimiterRegistry 생성
+RateLimiterRegistry rateLimiterRegistry = RateLimiterRegistry.custom()
+  .withRegistryStore(new CacheRateLimiterRegistryStore())
+  .build();
+```
+
+## Retry
+
+### Create a RetryRegistry
+
+- in-memory `RetryRegistry` 사용해서 `Retry` 인스턴스 생성, 관리
+
+```
+RetryRegistry retryRegistry = RetryRegistry.ofDefaults();
+```
+
+### Create and configure a Retry
+
+custom gloabl RetryConfig 가능 (RetryConfig builder 사용)
+
+- 최대 시도 횟수
+- 성공 시도 사이에 대기 시간
+- custom IntervalBiFunction : failure 이후 대기 시간 계산
+- custom 조건 1 : 특정 응답일때 재시도
+- custom 조건 2 : 특정 예외일때 재시도
+- 재시도해야하는 예외 리스트
+- 재시도 안해도 되는 예외 리스트
+
+| Config property         | Default value                                                | Description                                                                                                               |
+|-------------------------|--------------------------------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
+| maxAttempts             | 3                                                            | 최대 시도 횟수 (초기 호출을 첫 시도로 포함)                                                                                                |
+| waitDuration            | 500 [ms]                                                     | 재시도 사이 고정 대기 시간 (ms)                                                                                                      |
+| intervalFunction        | `numOfAttempts -> waitDuration`                              | 실패 이후 대기 시간을 수정하는 함수. 기본적으로 대기 시간은 고정값                                                                                    |
+| intervalBiFunction      | `(numOfAttempts, Either<throwable, result>) -> waitDuration` | 시도 번호와 결과 또는 예외에 따라 실패 이후 대기 시간을 수정하는 함수. intervalFunction과 함께 사용하면 IllegalStateException 발생                              |
+| retryOnResultPredicate  | `result -> false`                                            | 결과를 보고 재시도할지 여부를 평가하는 Predicate. 결과를 재시도해야하면 true, 그렇지 않으면 false를 반환해야 함.                                                 |
+| retryExceptionPredicate | `throwable -> true`                                          | 예외를 보고 재시도할지 여부를 평가하는 Predicate. 예외를 재시도해야하면 true, 그렇지 않으면 false를 반환해야 함.                                                 |
+| retryExceptions         | empty                                                        | 실패로 기록되어 재시도되는 Throwable 클래스 목록. 매개변수는 서브타입을 지원함. 주의 : Checked 예외를 사용하는 경우 CheckedSupplier를 사용                            
+| ignoreExceptions        | empty                                                        | 무시되어 재시도되지 않는 Throwable 클래스 목록. 매개변수는 서브타입을 지원함.                                                                          |
+| failAfterMaxAttempts    | false                                                        | Retry가 구성된 maxAttempts에 도달했지만 여전히 retryOnResultPredicate를 통과하지 못하면 `MaxRetriesExceededException` 던지는 것을 활성화 또는 비활성화 설정 여부 |
+
+```
+RetryConfig config = RetryConfig.custom()
+  .maxAttempts(2) // 최대 2번 시도
+  .waitDuration(Duration.ofMillis(1000)) // 1초 대기
+  .retryOnResult(response -> response.getStatus() == 500) // 500 에러 발생 시 재시도
+  .retryOnException(e -> e instanceof WebServiceException) // WebServiceException 발생 시 재시도
+  .retryExceptions(IOException.class, TimeoutException.class) // IOException, TimeoutException 발생 시 재시도
+  .ignoreExceptions(BusinessException.class, OtherBusinessException.class) // BusinessException, OtherBusinessException은 재시도하지 않음
+  .failAfterMaxAttempts(true) // 최대 시도 횟수에 도달하면 MaxRetriesExceededException 발생
+  .build();
+
+// Create a RetryRegistry with a custom global configuration
+RetryRegistry registry = RetryRegistry.of(config);
+
+// Get or create a Retry from the registry - 
+// Retry will be backed by the default config
+Retry retryWithDefaultConfig = registry.retry("name1");
+
+// Get or create a Retry from the registry, 
+// use a custom configuration when creating the retry
+RetryConfig custom = RetryConfig.custom()
+    .waitDuration(Duration.ofMillis(100))
+    .build();
+
+Retry retryWithCustomConfig = registry.retry("name2", custom);
+```
+
+### Decorate and execute a functional interface
+
+````
+// Given I have a HelloWorldService which throws an exception
+HelloWorldService  helloWorldService = mock(HelloWorldService.class);
+given(helloWorldService.sayHelloWorld())
+  .willThrow(new WebServiceException("BAM!"));
+
+// Create a Retry with default configuration
+Retry retry = Retry.ofDefaults("id");
+// Decorate the invocation of the HelloWorldService
+CheckedFunction0<String> retryableSupplier = Retry
+  .decorateCheckedSupplier(retry, helloWorldService::sayHelloWorld);
+
+// When I invoke the function
+Try<String> result = Try.of(retryableSupplier)
+  .recover((throwable) -> "Hello world from recovery function");
+
+// Then the helloWorldService should be invoked 3 times
+BDDMockito.then(helloWorldService).should(times(3)).sayHelloWorld();
+// and the exception should be handled by the recovery function
+assertThat(result.get()).isEqualTo("Hello world from recovery function");
+````
+
+### Consume emitted RegistryEvents
+
+- `RetryRegistry`에 이벤트 컨슈머를 등록하고, Retry 생성, 교체, 삭제 이벤트 감지
+
+```
+RetryRegistry registry = RetryRegistry.ofDefaults();
+registry.getEventPublisher()
+  .onEntryAdded(entryAddedEvent -> {
+    Retry addedRetry = entryAddedEvent.getAddedEntry();
+    LOG.info("Retry {} added", addedRetry.getName());
+  })
+  .onEntryRemoved(entryRemovedEvent -> {
+    Retry removedRetry = entryRemovedEvent.getRemovedEntry();
+    LOG.info("Retry {} removed", removedRetry.getName());
+  });
+```
+
+### Use a custom IntervalFunction
+
+- 고정 대기시간 대신, 매 재시도마다 대기시간을 다르게 설정 가능
+- `IntervalFunction` 을 생성하는 팩터리 메서드 사용
+
+```
+IntervalFunction defaultWaitInterval = IntervalFunction.ofDefaults();
+
+// This interval function is used internally 
+// when you only configure waitDuration
+IntervalFunction fixedWaitInterval = IntervalFunction
+  .of(Duration.ofSeconds(5));
+
+IntervalFunction intervalWithExponentialBackoff = IntervalFunction
+  .ofExponentialBackoff();
+
+IntervalFunction intervalWithCustomExponentialBackoff = IntervalFunction
+  .ofExponentialBackoff(IntervalFunction.DEFAULT_INITIAL_INTERVAL, 2d);
+
+IntervalFunction randomWaitInterval = IntervalFunction
+  .ofRandomized();
+
+// Overwrite the default intervalFunction with your custom one
+RetryConfig retryConfig = RetryConfig.custom()
+  .intervalFunction(intervalWithExponentialBackoff)
+  .build();
+```
