@@ -14,15 +14,16 @@ import org.springframework.context.event.EventListener
  * @author gihyeon-kim
  */
 @Configuration
-class MemberSubscriber{
+class MemberSubscriber {
     private val log = LoggerFactory.getLogger(javaClass)
 
     @EventListener
-    fun memberSignup(event: MemberSignupEvent){
+    suspend fun memberSignup(event: MemberSignupEvent) {
         log.info("Member Signup Event: $event")
-        CoroutineScope(Default).launch(handler) {
+
+        CoroutineScope(Default).launch { // 문제점 : 여기서 발생한 예외는 uncaught exceptions로 간주 spring logger가 모름
             delay(1000)
-            if(event.name == "Kim"){
+            if (event.name == "Kim") {
                 throw RuntimeException("Kim is not allowed to sign up")
             }
         }
