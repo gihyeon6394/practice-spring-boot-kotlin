@@ -783,3 +783,64 @@ RetryConfig retryConfig = RetryConfig.custom()
   .intervalFunction(intervalWithExponentialBackoff)
   .build();
 ```
+
+## TimeLimiter
+
+### Create a TimeLimiterRegistry
+
+- in-memory `TimeLimiterRegistry` 사용해서 `TimeLimiter` 인스턴스 생성, 관리
+
+```
+TimeLimiterRegistry timeLimiterRegistry = TimeLimiterRegistry.ofDefaults();
+```
+
+### Create and configure TimeLimiter
+
+- TimeLimiterConfig builder로 글로벌 커스텀 설정 가능
+- timeout duration, running future cancel 호출 여부
+
+```
+TimeLimiterConfig config = TimeLimiterConfig.custom()
+   .cancelRunningFuture(true)
+   .timeoutDuration(Duration.ofMillis(500))
+   .build();
+
+// Create a TimeLimiterRegistry with a custom global configuration
+TimeLimiterRegistry timeLimiterRegistry = TimeLimiterRegistry.of(config);
+
+// Get or create a TimeLimiter from the registry - 
+// TimeLimiter will be backed by the default config
+TimeLimiter timeLimiterWithDefaultConfig = registry.timeLimiter("name1");
+
+// Get or create a TimeLimiter from the registry, 
+// use a custom configuration when creating the TimeLimiter
+TimeLimiterConfig config = TimeLimiterConfig.custom()
+   .cancelRunningFuture(false)
+   .timeoutDuration(Duration.ofMillis(1000))
+   .build();
+
+TimeLimiter timeLimiterWithCustomConfig = registry.timeLimiter("name2", config);
+
+```
+
+### Decorate and execute a functional interface
+
+- `CompletionStage`, `Future`를 데코레이트해서 실행시간 제한 가능
+
+```
+// Given I have a helloWorldService.sayHelloWorld() method which takes too long
+HelloWorldService helloWorldService = mock(HelloWorldService.class);
+
+// Create a TimeLimiter
+TimeLimiter timeLimiter = TimeLimiter.of(Duration.ofSeconds(1));
+// The Scheduler is needed to schedule a timeout on a non-blocking CompletableFuture
+ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(3);
+
+// The non-blocking variant with a CompletableFuture
+CompletableFuture<String> result = timeLimiter.executeCompletionStage(
+  scheduler, () -> CompletableFuture.supplyAsync(helloWorldService::sayHelloWorld)).toCompletableFuture();
+
+// The blocking variant which is basically future.get(timeoutDuration, MILLISECONDS)
+String result = timeLimiter.executeFutureSupplier(
+  () -> CompletableFuture.supplyAsync(() -> helloWorldService::sayHelloWorld));
+```
