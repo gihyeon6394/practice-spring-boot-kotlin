@@ -844,3 +844,54 @@ CompletableFuture<String> result = timeLimiter.executeCompletionStage(
 String result = timeLimiter.executeFutureSupplier(
   () -> CompletableFuture.supplyAsync(() -> helloWorldService::sayHelloWorld));
 ```
+
+
+## Cache
+
+### Create and configure Cache
+
+- lamda 표현식 결과를 cache instance `JCache` 에 저장
+- 람다 표현식 호출 전에 캐싱을 확인하고, 캐시에 저장된 결과를 반환
+- 캐시 가져오기 실패하면 람다 표현식 호출
+
+```
+// Create a CacheContext by wrapping a JCache instance.
+javax.cache.Cache<String, String> cacheInstance = Caching
+  .getCache("cacheName", String.class, String.class);
+Cache<String, String> cacheContext = Cache.of(cacheInstance);
+
+// Decorate your call to BackendService.doSomething()
+CheckedFunction1<String, String> cachedFunction = Decorators
+    .ofCheckedSupplier(() -> backendService.doSomething())
+    .withCache(cacheContext)
+    .decorate();
+String value = Try.of(() -> cachedFunction.apply("cacheKey")).get();
+```
+
+### Consume emitted CacheEvents
+
+- `Cache`는 `CacheEvent`를 스트림으로 발행
+  - 이벤트 : cache hit, cache miss, cache error
+
+```
+cacheContext.getEventPublisher()
+    .onCacheHit(event -> logger.info(...))
+    .onCacheMiss(event -> logger.info(...))
+    .onError(event -> logger.info(...));
+```
+
+### Ehcache example
+
+```
+compile 'org.ehcache:ehcache:3.7.1'
+```
+
+```
+// Configure a cache (once)
+this.cacheManager = Caching.getCachingProvider().getCacheManager();
+this.cache = Cache.of(cacheManager.createCache("booksCache", new MutableConfiguration<>()));
+
+// Get books using a cache
+List<Book> books = Cache.decorateSupplier(cache, library::getBooks)
+    .apply(BOOKS_CACHE_KEY);
+```
