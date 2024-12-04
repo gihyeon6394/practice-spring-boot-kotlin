@@ -845,7 +845,6 @@ String result = timeLimiter.executeFutureSupplier(
   () -> CompletableFuture.supplyAsync(() -> helloWorldService::sayHelloWorld));
 ```
 
-
 ## Cache
 
 ### Create and configure Cache
@@ -871,7 +870,7 @@ String value = Try.of(() -> cachedFunction.apply("cacheKey")).get();
 ### Consume emitted CacheEvents
 
 - `Cache`는 `CacheEvent`를 스트림으로 발행
-  - 이벤트 : cache hit, cache miss, cache error
+    - 이벤트 : cache hit, cache miss, cache error
 
 ```
 cacheContext.getEventPublisher()
@@ -895,3 +894,95 @@ this.cache = Cache.of(cacheManager.createCache("booksCache", new MutableConfigur
 List<Book> books = Cache.decorateSupplier(cache, library::getBooks)
     .apply(BOOKS_CACHE_KEY);
 ```
+
+# ADD-ON MODULES
+
+## Kotlin
+
+### Introduction
+
+- `suspend` funcitonn 실행, 데코레이팅
+- `RateLimiter`, `Retry`, `CircuitBreaker`, `TimeLimiter`, 세마포어 기반 `Bulkhead`에 대한 확장함수 지원
+- Flow API에 대한 연산자 제공
+
+### Setup
+
+```groovy
+repositories {
+    jCenter()
+}
+
+dependencies {
+    compile "io.github.resilience4j:resilience4j-kotlin:${resilience4jVersion}"
+    // also have a dependency on the core module(s) needed - for example, retry:
+    compile "io.github.resilience4j:resilience4j-retry:${resilience4jVersion}"
+}
+```
+
+### Usage
+
+- 각 모듈에 대해 확장함수 제공
+- 확장함수 1. suspend function 실행
+- 확장함수 2. suspend function을 데코레이트
+
+#### Usage - Suspending Functions
+
+```kotlin
+val circuitBreaker = CircuitBreaker.ofDefaults()
+val result = circuitBreaker.executeSuspendFunction {
+    // call suspending functions here
+}
+
+val function = circuitBreaker.decorateSuspendFunction {
+    // call suspending functions here
+}
+val result = function()
+```
+
+#### Usage - Flow
+
+```kotlin
+val retry = Retry.ofDefaults()
+val rateLimiter = RateLimiter.ofDefaults()
+val timeLimiter = TimeLimiter.ofDefaults()
+val circuitBreaker = CircuitBreaker.ofDefaults()
+
+flowOf(1, 2, 3)
+    .retry(retry)
+    .rateLimiter(rateLimiter)
+    .timeLimiter(timeLimiter)
+    .circuitBreaker(circuitBreaker)
+    .collect { println(it) }
+```
+
+### Bulkhead
+
+- `maxWaitTIme` : 최대 대기시간
+    - 0이 아닌 경우 설정값까지 블로킹
+- `maxWiatTime`이 0이 아닌 Bulkhead와 함께 확장함수 사용 권장하지 않음
+- 코루틴 스코프가 취소되면 권한 릴리즈
+    - 스코프가 취소되면 성공이나 실패가 기록되지 않음
+- 스레드 풀 기반의 bulkhead 확장함수 미지원
+
+### CircuitBreaker
+
+- `OPEN` 상태가 되면 `CallNotPermittedException` 발생
+- 코루틴 스코프가 취소되면, 권한을 릴리즈
+    - 스코프가 취소되면 성공이나 실패가 기록되지 않음
+
+### RateLimiter
+
+- `delay()` 를 사용해 rate limit에 도달할 때까지 대기
+
+### Retry
+
+- `delay()` 를 사용해 재시도 사이에 대기
+
+### TimeLimiter
+
+- `withTimeout()`을 사용해 시간 제한
+- 타임아웃 시 `TimeoutCancellationException` 발생
+- 타임아웃이 발생하면 코루틴이 취소됨
+- 타임아웃 이후 block은 취소 가능한 suspending function call 시점에서만 멈춤
+- `cancelRunningFuture` 설정은 무시됨
+    - 타임아웃시 suspend function 은 항상 취소됨 (`cancelRunningFuture=false` 이어도)
