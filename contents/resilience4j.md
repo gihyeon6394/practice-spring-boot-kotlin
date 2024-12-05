@@ -20,6 +20,7 @@
     - Cache
 - ADD-ON MODULES
     - Kotlin
+    - Feign
 - SPRING REACTOR
     - Getting Started
     - Examples
@@ -986,3 +987,113 @@ flowOf(1, 2, 3)
 - 타임아웃 이후 block은 취소 가능한 suspending function call 시점에서만 멈춤
 - `cancelRunningFuture` 설정은 무시됨
     - 타임아웃시 suspend function 은 항상 취소됨 (`cancelRunningFuture=false` 이어도)
+
+## Feign
+
+- HystrixFeign과 비슷하게 feign을 Resilience4j로 데코레이트
+- feign framework에 fault-tolearance 패턴 추가 CircuitBreaker, RateLimiter
+
+### Decorating Feign Interfaces
+
+- `Resilence4jFeign.builder()`를 사용해 Feign 인스턴스 생성
+    - `Feign.builder` 확장
+    - 커스텀 `InvocationHandlerFactory` 사용 가능
+- Resilience4jFeign는 자신의 `InvocationHandlerFactory`를 데코레이터에 적용
+- `FeignDecorators`를 사용해 데코레이트
+
+![img_5.png](img_5.png)
+
+```
+public interface MyService {
+    @RequestLine("GET /greeting")
+    String getGreeting();
+            
+    @RequestLine("POST /greeting")
+    String createGreeting();
+}
+
+// For decorating a feign interface
+CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("backendName");
+RateLimiter rateLimiter = RateLimiter.ofDefaults("backendName");
+FeignDecorators decorators = FeignDecorators.builder()
+                                 .withRateLimiter(rateLimiter)
+                                 .withCircuitBreaker(circuitBreaker)
+                                 .build();
+MyService myService = Resilience4jFeign.builder(decorators).target(MyService.class, "http://localhost:8080/");
+```
+
+### Ordering of Decorators
+
+- `FeignDecorators`에 추가된 순서대로 데코레이터 적용
+- 순서가 결과에 영향을 미치므로 주의
+- e.g. CircuitBreaker -> RateLimiter
+    - CircuitBreaker가 `OPEN`일 때, RateLimiter는 호출되지 않음
+
+```
+// rateLimiter -> circuitBreaker
+FeignDecorators decoratorsA = FeignDecorators.builder()
+                                  .withCircuitBreaker(circuitBreaker)
+                                  .withRateLimiter(rateLimiter)
+                                  .build();
+
+// circuitBreaker -> rateLimiter         
+FeignDecorators decoratorsB = FeignDecorators.builder()
+                                  .withRateLimiter(rateLimiter)
+                                  .withCircuitBreaker(circuitBreaker)
+                                  .build();
+```
+
+### Fallback
+
+- 예외가 발생하면 호출할 대체 함수를 지정 가능
+    - 예외 : `FeignDecorators`가 작동될때 (CircuitBreaker, ..)
+- fallback은 반드시 target으로 명시한 인터페이스를 구현해야함
+    - 아니면 `IllegaalArgumentException` 발생
+- 동일한 예외에 여러개 fallback을 할당 가능
+- fallback에서 예외 전파 가능
+    - fallback에서 서로 다른 동작을 정의
+    - fallback에서 예외를 로깅 등
+
+```
+public interface MyService {
+    @RequestLine("GET /greeting")
+    String greeting();
+}
+
+// For decorating a feign interface with fallback
+MyService requestFailedFallback = () -> "fallback greeting";
+MyService circuitBreakerFallback = () -> "CircuitBreaker is open!";
+CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("backendName");
+FeignDecorators decorators = FeignDecorators.builder()
+                                  .withFallback(requestFailedFallback, FeignException.class) // FeignException 발생 시 대체 함수 호출
+                                  .withFallback(circuitBreakerFallback, CircuitBreakerOpenException.class) // CircuitBreakerOpenException 발생 시 대체 함수 호출
+                                  .build();
+MyService myService = Resilience4jFeign.builder(decorators).target(MyService.class, "http://localhost:8080/", fallback);
+```
+
+```
+public interface MyService {
+    @RequestLine("GET /greeting")
+    String greeting();
+}
+
+public class MyFallback implements MyService {
+    private Exception cause;
+
+    public MyFallback(Exception cause) {
+        this.cause = cause;
+    }
+
+    public String greeting() {
+        if (cause instanceOf FeignException) {
+            return "Feign Exception";
+        } else {
+            return "Other exception";
+        }
+    }
+}
+
+FeignDecorators decorators = FeignDecorators.builder()
+                                 .withFallbackFactory(MyFallback::new)
+                                 .build();
+```
