@@ -32,7 +32,7 @@
 
 ## Introduction
 
-- Resilience4j 는 경량 fault tolerance 라이브러리이다. (inspired by Netflix Hystrix)
+- Resilience4j 는 경량 fault tolerance 라이브러리 (inspired by Netflix Hystrix)
 - Java 8, functional programming 위해 설계
 - Netfilx Hystrix는 Archauis에 컴파일 의존성을 가지지만, Resilience4j는 Vavr 라이브러리만을 사용 (Vavr은 다른 라이브러리에 의존성이 없음)
     - Archauis는 Guaava, Apache Commons에 의존
@@ -40,7 +40,7 @@
 ### Sneak preview
 
 - CircuitBreaker와 Retry를 람다 표현식으로 구현한 예제
-- 예외 발생 시 3번 retry
+- 예외 발생 시 3번 retry (재시도)
 - retry 인터벌 설정 가능
 - backoff strategy 설정 가능
 
@@ -91,6 +91,45 @@ CompletableFuture<String> future = Decorators.ofSupplier(supplier)
         .get().toCompletableFuture();
 ```
 
+### Modularization
+
+- Resilience4j는 모듈화되어 있음
+- 모든 모듈을 임포트하지 않고, 필요한것만 골라서 사용 가능
+
+#### Core modules
+
+- resilience4j-circuitbreaker: Circuit breaking
+- resilience4j-ratelimiter: Rate limiting
+- resilience4j-bulkhead: Bulkheading
+- resilience4j-retry: Automatic retrying (sync and async)
+- resilience4j-cache: Result caching
+- resilience4j-timelimiter: Timeout handling
+
+#### Add-on modules
+
+- resilience4j-retrofit: Retrofit adapter
+- resilience4j-feign: Feign adapter
+- resilience4j-consumer: Circular Buffer Event consumer
+- resilience4j-kotlin: Kotlin coroutines support
+
+#### Frameworks modules
+
+- resilience4j-spring-boot: Spring Boot Starter
+- resilience4j-spring-boot2: Spring Boot 2 Starter
+- resilience4j-ratpack: Ratpack Starter
+- resilience4j-vertx: Vertx Future decorator
+
+#### Reactive modules
+
+- resilience4j-rxjava2: Custom RxJava2 operators
+- resilience4j-reactor: Custom Spring Reactor operators
+
+#### Metrics modules
+
+- resilience4j-micrometer: Micrometer Metrics exporter
+- resilience4j-metrics: Dropwizard Metrics exporter
+- resilience4j-prometheus: Prometheus Metrics exporter
+
 ## Gradle
 
 - JDK 8 이상 필요
@@ -119,7 +158,7 @@ dependencies {
 ![img.png](img.png)
 
 - CircuitBreaker는 일반적인 상태 (`CLOSED`, `OPEN`, `HALF_OPEN`), 특별한 상태 (`DISABLED`, `FORCED_OPEN`)를 가짐
-- sliding window : 요청들을 저장하고 취합
+- sliding window를 사용해 요청들을 저장하고 취합
     - count-based sliding window : 마지막 N개 요청 수 기반
     - time-based sliding window : 마지막 N초 요청 수 기반
 
@@ -130,10 +169,11 @@ dependencies {
 - N번 측정하는 circular array (환형 배열) 사용
     - window size = 10이면, 환형 배열이 10개의 측정값을 가짐
 - 점차적으로 총합을 업데이트해감
+  - 새로운 call이 들어오면 기록해나감
 - Substract-on-Evict : 새로운 call이 들어오면 가장 오래된 call을 빼주고, (evicted) 총합 업데이트
 - 공간 소모 : O(N) (N은 window size)
 - 스냅샨 검색 시간 : O(1)
-    - 스냅샷은 사전에 항상 업데이트되어 있음
+    - 스냅샷은 사전에 aggregate되어 있음
 
 ### Time-based sliding window
 
@@ -141,9 +181,8 @@ dependencies {
     - window size = 10 (=10초)이면, 10개의 부분 집계를 가짐 (=10 buckets)
     - 각 bucket에는 특정 시간 동안의 요청 수를 가짐
 - partial aggregation : 각 bucket은 특정 시간 동안의 요청 수를 가짐
-- 환형 배열의 head bucket에 최근 요청을 저장
-    - 뒤따르는 bucket은 이전 bucket의 요청을 저장
-- 각 튜플을 개별적으로 bucket에 저장하지않고, 점진적으로 bucket과 total aggregation을 업데이트
+- 환형 배열의 head bucket에 최근 epoch간의 요청을 저장
+    - 뒤따르는 bucket은 이전 요청을 저장
 - Substract-on-Evict :
     - 새로운 call이 들어오면 total aggregation 업데이트
     - 오래된 bucket을 제거할 때, total aggregation 업데이트
