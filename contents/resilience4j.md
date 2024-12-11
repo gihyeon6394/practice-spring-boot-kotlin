@@ -1392,6 +1392,8 @@ resilience4j:
 }
 ```
 
+- `GET /actuator/metrics/resilience4j.circuitbreaker.calls`
+
 ```json
 {
   "name": "resilience4j.circuitbreaker.calls",
@@ -1442,6 +1444,7 @@ resilience4j.ratelimiter:
 ```
 
 ```json{
+{
   "status": "UP",
   "details": {
     "circuitBreakers": {
