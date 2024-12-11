@@ -1137,7 +1137,6 @@ FeignDecorators decorators = FeignDecorators.builder()
                                  .build();
 ```
 
-
 # SPRING REACTOR
 
 - 커스텀 Spring Reactor operators 가 있는 모듈 제공
@@ -1152,5 +1151,383 @@ repositories {
 
 dependencies {
     compile "io.github.resilience4j:resilience4j-reactor:${resilience4jVersion}"
+}
+```
+
+# SPRING BOOT 2
+
+- `org.springframework.boot:spring-boot-starter-actuator`, `org.springframework.boot:spring-boot-starter-aop` 필요
+- webflux 사용 시 `io.github.resilience4j:resilience4j-reactor` 필요
+
+```groovy
+repositories {
+    jCenter()
+}
+
+dependencies {
+    compile "io.github.resilience4j:resilience4j-spring-boot2:${resilience4jVersion}"
+    compile('org.springframework.boot:spring-boot-starter-actuator')
+    compile('org.springframework.boot:spring-boot-starter-aop')
+}
+```
+
+### Configuration
+
+- `application.yml`에 설정
+
+```yaml
+resilience4j.circuitbreaker:
+  instances:
+    backendA:
+      registerHealthIndicator: true
+      slidingWindowSize: 100
+    backendB:
+      registerHealthIndicator: true
+      slidingWindowSize: 10
+      permittedNumberOfCallsInHalfOpenState: 3
+      slidingWindowType: TIME_BASED
+      minimumNumberOfCalls: 20
+      waitDurationInOpenState: 50s
+      failureRateThreshold: 50
+      eventConsumerBufferSize: 10
+      recordFailurePredicate: io.github.robwin.exception.RecordFailurePredicate
+
+resilience4j.retry:
+  instances:
+    backendA:
+      maxAttempts: 3
+      waitDuration: 10s
+      enableExponentialBackoff: true
+      exponentialBackoffMultiplier: 2
+      retryExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.io.IOException
+      ignoreExceptions:
+        - io.github.robwin.exception.BusinessException
+    backendB:
+      maxAttempts: 3
+      waitDuration: 10s
+      retryExceptions:
+        - org.springframework.web.client.HttpServerErrorException
+        - java.io.IOException
+      ignoreExceptions:
+        - io.github.robwin.exception.BusinessException
+
+resilience4j.bulkhead:
+  instances:
+    backendA:
+      maxConcurrentCalls: 10
+    backendB:
+      maxWaitDuration: 10ms
+      maxConcurrentCalls: 20
+
+resilience4j.thread-pool-bulkhead:
+  instances:
+    backendC:
+      maxThreadPoolSize: 1
+      coreThreadPoolSize: 1
+      queueCapacity: 1
+      writableStackTraceEnabled: true
+
+resilience4j.ratelimiter:
+  instances:
+    backendA:
+      limitForPeriod: 10
+      limitRefreshPeriod: 1s
+      timeoutDuration: 0
+      registerHealthIndicator: true
+      eventConsumerBufferSize: 100
+    backendB:
+      limitForPeriod: 6
+      limitRefreshPeriod: 500ms
+      timeoutDuration: 3s
+
+resilience4j.timelimiter:
+  instances:
+    backendA:
+      timeoutDuration: 2s
+      cancelRunningFuture: true
+    backendB:
+      timeoutDuration: 1s
+      cancelRunningFuture: false
+```
+
+- default 설정을 오버라이드하여 커스텀 설정 가능
+- `someShared` : 공유 설정
+
+```yaml
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      slidingWindowSize: 100
+      permittedNumberOfCallsInHalfOpenState: 10
+      waitDurationInOpenState: 10000
+      failureRateThreshold: 60
+      eventConsumerBufferSize: 10
+      registerHealthIndicator: true
+    someShared:
+      slidingWindowSize: 50
+      permittedNumberOfCallsInHalfOpenState: 10
+  instances:
+    backendA:
+      baseConfig: default
+      waitDurationInOpenState: 5000
+    backendB:
+      baseConfig: someShared
+```
+
+- 특정 인스턴스명에 대해 `Customizer` 사용해 오버라이드 가능
+
+````
+// backendA에 대해 커스터마이저를 사용해 slidingWindowSize를 100으로 설정
+@Bean
+public CircuitBreakerConfigCustomizer testCustomizer() {
+    return CircuitBreakerConfigCustomizer
+        .of("backendA", builder -> builder.slidingWindowSize(100));
+}
+````
+
+| Resilienc4j Type   | Instance Customizer class            |
+|--------------------|--------------------------------------|
+| Circuit breaker    | `CircuitBreakerConfigCustomizer`     |
+| Retry              | `RetryConfigCustomizer`              |
+| Rate limiter       | `RateLimiterConfigCustomizer`        |
+| Bulkhead           | `BulkheadConfigCustomizer`           |
+| ThreadPoolBulkhead | `ThreadPoolBulkheadConfigCustomizer` |
+| Time limiter       | `TimeLimiterConfigCustomizer`        |
+
+### Annotations
+
+- 자동 설정 가능한 애노테이션 지원
+- synchronous 타입, asynchronous 타입 지원
+- `@Bulkhead` 의 속성으로 어떤 bulkhead를 사용할지 지정 가능
+    - 세마포어 디폴트
+
+````
+@Bulkhead(name = BACKEND, type = Bulkhead.Type.THREADPOOL)
+public CompletableFuture<String> doSomethingAsync() throws InterruptedException {
+        Thread.sleep(500);
+        return CompletableFuture.completedFuture("Test");
+}
+````
+
+### FallBack methods
+
+- `try/catch` 블록 처럼 동작
+- fallback 메서드가 설정되면
+    1. 모든 예외는 fallback 메서드 executor에게 포워딩
+    2. fallback 메서드 executor가 best mach fallback 메서드 탐색
+    3. fallback 메서드 실행
+- fallback 메서드는 현재 circuit breaker 상태와 무관
+- fallback 메서드는 반드시 같은 클래스에 동일한 메서드 시그니처로 존재해야함
+
+````
+@CircuitBreaker(name = BACKEND, fallbackMethod = "fallback")
+@RateLimiter(name = BACKEND)
+@Bulkhead(name = BACKEND, fallbackMethod = "fallback")
+@Retry(name = BACKEND)
+@TimeLimiter(name = BACKEND)
+public Mono<String> method(String param1) {
+    return Mono.error(new NumberFormatException());
+}
+
+private Mono<String> fallback(String param1, CallNotPermittedException e) {
+    return Mono.just("Handled the exception when the CircuitBreaker is open");
+}
+
+private Mono<String> fallback(String param1, BulkheadFullException e) {
+    return Mono.just("Handled the exception when the Bulkhead is full");
+}
+
+// method가 NumberFormatException을 던지면 아래 fallback 메서드가 호출
+private Mono<String> fallback(String param1, NumberFormatException e) {
+    return Mono.just("Handled the NumberFormatException");
+}
+
+private Mono<String> fallback(String param1, Exception e) {
+    return Mono.just("Handled any other exception");
+}
+````
+
+### Aspect order
+
+- `Retry ( CircuitBreaker ( RateLimiter ( TimeLimiter ( Bulkhead ( Function ) ) ) ) )`
+    - => Bulkhead -> TimeLimiter -> RateLimiter -> CircuitBreaker -> Retry
+- 즉 `Retry`가 가장 마지막에 적용
+- 오더를 조정하고싶으면 functional chaining style로 변형 가능 (애노테이션 X)
+- 명시적으로 지정할수도 있음
+    - 값이 클수록 우선순위가 높음 (= 먼저 실행됨)
+
+````
+- resilience4j.retry.retryAspectOrder
+- resilience4j.circuitbreaker.circuitBreakerAspectOrder
+- resilience4j.ratelimiter.rateLimiterAspectOrder
+- resilience4j.timelimiter.timeLimiterAspectOrder
+- resilience4j.bulkhead.bulkheadAspectOrder
+````
+
+```yaml
+resilience4j:
+  circuitbreaker:
+    circuitBreakerAspectOrder: 1
+  retry:
+    retryAspectOrder: 2
+```
+
+### Metrics endpoint
+
+- 자동으로 Metric endpoint에 메트릭 발행
+- `GET /actuator/metrics` 에서 확인 가능
+- 프로메테우스에 메트릭 발행시 `io.micrometer:micrometer-registry-prometheus` 필요
+    - `GET /actuator/prometheus`
+
+```json
+{
+  "names": [
+    "resilience4j.circuitbreaker.calls",
+    "resilience4j.circuitbreaker.buffered.calls",
+    "resilience4j.circuitbreaker.state",
+    "resilience4j.circuitbreaker.failure.rate"
+  ]
+}
+```
+
+```json
+{
+  "name": "resilience4j.circuitbreaker.calls",
+  "measurements": [
+    {
+      "statistic": "VALUE",
+      "value": 3
+    }
+  ],
+  "availableTags": [
+    {
+      "tag": "kind",
+      "values": [
+        "not_permitted",
+        "successful",
+        "failed"
+      ]
+    },
+    {
+      "tag": "name",
+      "values": [
+        "backendB",
+        "backendA"
+      ]
+    }
+  ]
+}
+```
+
+### Health endpoint
+
+- 디폴트로 `CircuitBreaker`, `RateLimiter` health indicator가 비활성화
+- 주의 : 설정 후 CircuitBreaker가 `OPEN`되면 application 상태가 `DOWN`으로 변경됨
+
+```yaml
+management.health.circuitbreakers.enabled: true
+management.health.ratelimiters.enabled: true
+
+resilience4j.circuitbreaker:
+  configs:
+    default:
+      registerHealthIndicator: true
+
+resilience4j.ratelimiter:
+  configs:
+    instances:
+      registerHealthIndicator: true
+```
+
+```json{
+  "status": "UP",
+  "details": {
+    "circuitBreakers": {
+      "status": "UP",
+      "details": {
+        "backendB": {
+          "status": "UP",
+          "details": {
+            "failureRate": "-1.0%",
+            "failureRateThreshold": "50.0%",
+            "slowCallRate": "-1.0%",
+            "slowCallRateThreshold": "100.0%",
+            "bufferedCalls": 0,
+            "slowCalls": 0,
+            "slowFailedCalls": 0,
+            "failedCalls": 0,
+            "notPermittedCalls": 0,
+            "state": "CLOSED"
+          }
+        },
+        "backendA": {
+          "status": "UP",
+          "details": {
+            "failureRate": "-1.0%",
+            "failureRateThreshold": "50.0%",
+            "slowCallRate": "-1.0%",
+            "slowCallRateThreshold": "100.0%",
+            "bufferedCalls": 0,
+            "slowCalls": 0,
+            "slowFailedCalls": 0,
+            "failedCalls": 0,
+            "notPermittedCalls": 0,
+            "state": "CLOSED"
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+### Events endpoint
+
+- 별도의 circular event consumer buffer에 방출된 이벤트가 저장
+- 버퍼 사이즈는 `application.yml`에서 설정 가능 (`eventConsumerBufferSize`)
+- `/actuator/circuitbreakers` 리스트에서 모든 `CircuitBreaker` 인스턴스 확인 가능
+- `/actuator/circuitbreakerevents` 리스트는 기본적으로 최근 100개의 이벤트를 확인
+
+```json
+{
+  "circuitBreakers": [
+    "backendA",
+    "backendB"
+  ]
+}
+```
+
+```json
+{
+  "circuitBreakerEvents": [
+    {
+      "circuitBreakerName": "backendA",
+      "type": "ERROR",
+      "creationTime": "2017-01-10T15:39:17.117+01:00[Europe/Berlin]",
+      "errorMessage": "org.springframework.web.client.HttpServerErrorException: 500 This is a remote exception",
+      "durationInMs": 0
+    },
+    {
+      "circuitBreakerName": "backendA",
+      "type": "SUCCESS",
+      "creationTime": "2017-01-10T15:39:20.518+01:00[Europe/Berlin]",
+      "durationInMs": 0
+    },
+    {
+      "circuitBreakerName": "backendB",
+      "type": "ERROR",
+      "creationTime": "2017-01-10T15:41:31.159+01:00[Europe/Berlin]",
+      "errorMessage": "org.springframework.web.client.HttpServerErrorException: 500 This is a remote exception",
+      "durationInMs": 0
+    },
+    {
+      "circuitBreakerName": "backendB",
+      "type": "SUCCESS",
+      "creationTime": "2017-01-10T15:41:33.526+01:00[Europe/Berlin]",
+      "durationInMs": 0
+    }
+  ]
 }
 ```
