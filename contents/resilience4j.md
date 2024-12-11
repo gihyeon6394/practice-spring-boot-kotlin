@@ -169,7 +169,7 @@ dependencies {
 - N번 측정하는 circular array (환형 배열) 사용
     - window size = 10이면, 환형 배열이 10개의 측정값을 가짐
 - 점차적으로 총합을 업데이트해감
-  - 새로운 call이 들어오면 기록해나감
+    - 새로운 call이 들어오면 기록해나감
 - Substract-on-Evict : 새로운 call이 들어오면 가장 오래된 call을 빼주고, (evicted) 총합 업데이트
 - 공간 소모 : O(N) (N은 window size)
 - 스냅샨 검색 시간 : O(1)
@@ -1135,4 +1135,22 @@ public class MyFallback implements MyService {
 FeignDecorators decorators = FeignDecorators.builder()
                                  .withFallbackFactory(MyFallback::new)
                                  .build();
+```
+
+
+# SPRING REACTOR
+
+- 커스텀 Spring Reactor operators 가 있는 모듈 제공
+- downstream subscriber는 upstream publisher에 대한 구독 권한 요청
+- `Mono`, `Flux` 지원
+- `io.projectreactor:reactor-core` 필요
+
+```groovy
+repositories {
+    jCenter()
+}
+
+dependencies {
+    compile "io.github.resilience4j:resilience4j-reactor:${resilience4jVersion}"
+}
 ```
