@@ -41,21 +41,21 @@ logging:
 resilience4j.circuitbreaker:
   configs:
     default:
-      slidingWindowSize: 100
-      permittedNumberOfCallsInHalfOpenState: 10
-      waitDurationInOpenState: 10000
-      failureRateThreshold: 60
-      eventConsumerBufferSize: 10
+      slidingWindowSize: 100 # sliding window size
+      permittedNumberOfCallsInHalfOpenState: 10 # half open 상태에서 허용되는 호출 수
+      waitDurationInOpenState: 10000 # OPEN -> HALF_OPEN 상태로 전환하기까지 대기 시간
+      failureRateThreshold: 60 # 실패 임계치, 60% 이상 실패하면 OPEN 상태로 전환
+      eventConsumerBufferSize: 10 # 이벤트 컨슈머 버퍼 크기, GET /actuator/circuitbreakerevents 에서 확인 가능
       registerHealthIndicator: true
-    someShared:
+    someShared: # 공유 설정 전용 변수
       slidingWindowSize: 50
       permittedNumberOfCallsInHalfOpenState: 10
   instances:
     appA:
-      baseConfig: default
-      waitDurationInOpenState: 5000
+      baseConfig: default # default 설정을 상속받음
+      waitDurationInOpenState: 5000 # 재정의 : OPEN -> HALF_OPEN 상태로 전환하기까지 대기 시간
     appB:
-      baseConfig: someShared
+      baseConfig: someShared # someShared 설정을 상속받음
 management:
   jmx:
     metrics:
