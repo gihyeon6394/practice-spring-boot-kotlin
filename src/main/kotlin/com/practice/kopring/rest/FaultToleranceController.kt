@@ -1,6 +1,7 @@
 package com.practice.kopring.rest
 
 import com.mysql.cj.jdbc.exceptions.MySQLTimeoutException
+import com.practice.kopring.application.faultTolerance.FaultToleranceService
 import com.practice.kopring.application.tmp.Person
 import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker
 import org.slf4j.LoggerFactory
@@ -15,7 +16,9 @@ import org.springframework.web.bind.annotation.RestController
  */
 @RestController
 @RequestMapping("/fault-tolerance")
-class FaultToleranceController {
+class FaultToleranceController (
+    private val faultToleranceService: FaultToleranceService
+){
 
     /**
      * DB 타임아웃이 발생하면 대체 데이터를 반환하는 api
