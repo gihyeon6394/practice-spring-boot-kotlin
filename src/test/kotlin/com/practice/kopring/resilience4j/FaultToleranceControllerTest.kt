@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.post
 
 
 /**
@@ -18,7 +19,6 @@ import org.springframework.test.web.servlet.get
 @SpringBootTest
 @AutoConfigureMockMvc
 class FaultToleranceControllerTest {
-
 
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -34,7 +34,19 @@ class FaultToleranceControllerTest {
                     ObjectMapper().registerKotlinModule().writeValueAsString(it)
                 }
             }
-        }
+        }.andReturn()
     }
 
+
+    @Test
+    @DisplayName("CircuitBreaker를 통해 비즈니스 로직에서 예외 발생 시 대체 상태를 반환한다.")
+    fun testCircleBreakerLogic() {
+        mockMvc.post("/fault-tolerance/some-logic") {
+        }.andExpect {
+            status { isOk() }
+            content {
+                0
+            }
+        }.andReturn()
+    }
 }
