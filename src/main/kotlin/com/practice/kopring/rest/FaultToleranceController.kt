@@ -19,6 +19,7 @@ class FaultToleranceController(
     private val faultToleranceService: FaultToleranceService,
 ) {
 
+
     /**
      * DB 타임아웃이 발생하면 대체 데이터를 반환하는 api
      */
@@ -38,5 +39,11 @@ class FaultToleranceController(
     @ResponseStatus(HttpStatus.OK)
     fun someLogic(): Int {
         return faultToleranceService.someLogicWithExternalAPI()
+    }
+
+    @PostMapping("/some-logic-with-argument")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun someLoginWithArgument() {
+        faultToleranceService.someLoginWithArgument()
     }
 }

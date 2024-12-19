@@ -47,6 +47,8 @@ resilience4j.circuitbreaker:
       failureRateThreshold: 60 # 실패 임계치, 60% 이상 실패하면 OPEN 상태로 전환
       eventConsumerBufferSize: 10 # 이벤트 컨슈머 버퍼 크기, GET /actuator/circuitbreakerevents 에서 확인 가능
       registerHealthIndicator: true
+      ignore-exceptions:
+        - java.lang.IllegalArgumentException
     someShared: # 공유 설정 전용 변수
       slidingWindowSize: 50
       permittedNumberOfCallsInHalfOpenState: 10
